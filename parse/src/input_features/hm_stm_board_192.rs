@@ -8,8 +8,7 @@ pub struct HmStmBoard192;
 
 impl InputFeatureSet for HmStmBoard192 {
     const MAX_FEATURES: usize = 16;
-    const INDICES_PER_FEATURE: usize = 2;
-    const TENSORS_PER_BOARD: usize = 4;
+    const INDICES_PER_FEATURE: &'static [usize] = &[2, 2, 2, 2];
 
     fn add_features(board: Board, mut entry: EntryFeatureWriter) {
         let stm = board.side_to_move();
@@ -24,7 +23,7 @@ impl InputFeatureSet for HmStmBoard192 {
                         (true, false) => 3,
                     };
                     let feature = feature(color, piece, square);
-                    entry.add_feature(tensor, feature as i64, 1.0);
+                    entry.add_feature(tensor, &[feature as i64], 1.0);
                 }
             }
         }

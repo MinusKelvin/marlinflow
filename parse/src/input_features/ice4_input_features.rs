@@ -1,14 +1,14 @@
-use cozy_chess::{Board, Color, File, Piece, Square};
+use cozy_chess::{Board, Color, File, Piece, Square, Rank};
 
 use crate::batch::EntryFeatureWriter;
 
 use super::InputFeatureSet;
 
-pub struct PhasedHmStmBoard192;
+pub struct Ice4InputFeatures;
 
-impl InputFeatureSet for PhasedHmStmBoard192 {
+impl InputFeatureSet for Ice4InputFeatures {
     const MAX_FEATURES: usize = 32;
-    const INDICES_PER_FEATURE: &'static [usize] = &[2,2,2,2];
+    const INDICES_PER_FEATURE: &'static [usize] = &[2, 2, 2, 2, 3];
 
     fn add_features(board: Board, mut entry: EntryFeatureWriter) {
         let stm = board.side_to_move();
@@ -28,16 +28,19 @@ impl InputFeatureSet for PhasedHmStmBoard192 {
                         (false, false) => 2,
                         (true, false) => 3,
                     };
-                    let feature = feature(color, piece, square);
+                    let feature = hm_pst_feature(color, piece, square);
                     entry.add_feature(tensor, &[feature as i64], phase);
                     entry.add_feature(tensor, &[feature as i64 + 192], 1.0 - phase);
+
+                    let feature = file_feature(stm, color, piece, square.rank());
+                    entry.add_feature(4, &[square.file() as i64, feature as i64], 1.0);
                 }
             }
         }
     }
 }
 
-fn feature(color: Color, piece: Piece, square: Square) -> usize {
+fn hm_pst_feature(color: Color, piece: Piece, square: Square) -> usize {
     let rank = match color {
         Color::White => square.rank(),
         Color::Black => square.rank().flip(),
@@ -49,5 +52,17 @@ fn feature(color: Color, piece: Piece, square: Square) -> usize {
     let mut index = 0;
     index = index * Piece::NUM + piece as usize;
     index = index * Square::NUM / 2 + rank as usize * 4 + file as usize;
+    index
+}
+
+fn file_feature(perspective: Color, color: Color, piece: Piece, rank: Rank) -> usize {
+    let (rank, color) = match perspective {
+        Color::White => (rank, color),
+        Color::Black => (rank.flip(), !color),
+    };
+    let mut index = 0;
+    index = index * Color::NUM + color as usize;
+    index = index * Piece::NUM + piece as usize;
+    index = index * Rank::NUM + rank as usize;
     index
 }

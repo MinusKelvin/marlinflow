@@ -30,7 +30,6 @@ def _load_parse_lib():
     lib.batch_reader_drop.restype = None
 
     lib.input_feature_set_get_max_features.restype = ctypes.c_uint32
-    lib.input_feature_set_get_indices_per_feature.restype = ctypes.c_uint32
 
     lib.bucketing_scheme_get_bucket_count.restype = ctypes.c_uint32
 
@@ -49,12 +48,10 @@ class InputFeatureSet(IntEnum):
     HM_STM_BOARD_192 = 3
     PHASED_HM_STM_BOARD_192 = 4
     PHASED_STM_BOARD_384 = 5
+    ICE4_INPUT_FEATURES = 6
 
     def max_features(self) -> int:
         return PARSE_LIB.input_feature_set_get_max_features(self)
-
-    def indices_per_feature(self) -> int:
-        return PARSE_LIB.input_feature_set_get_indices_per_feature(self)
 
 class BucketingScheme(IntEnum):
     NO_BUCKETING = 0
@@ -108,8 +105,8 @@ class ParserBatch:
     def get_tensors_per_board(self) -> int:
         return PARSE_LIB.batch_get_tensors_per_board(self._ptr)
 
-    def get_indices_per_feature(self) -> int:
-        return PARSE_LIB.batch_get_indices_per_feature(self._ptr)
+    def get_indices_per_feature(self, tensor: int) -> int:
+        return PARSE_LIB.batch_get_indices_per_feature(self._ptr, tensor)
 
     def get_cp_ptr(self) -> ctypes.pointer[ctypes.c_float]:
         return PARSE_LIB.batch_get_cp_ptr(self._ptr)
@@ -127,7 +124,6 @@ class ParserBatch:
                 tch_array = tch_array.pin_memory()
             return tch_array.to(device, non_blocking=True)
 
-        indices_per_feature = self.get_indices_per_feature()
         indices = []
         values = []
         for i in range(self.get_tensors_per_board()):
@@ -135,7 +131,7 @@ class ParserBatch:
             indices.append(to_pytorch(
                 np.ctypeslib.as_array(
                     self.get_feature_buffer_ptr(i),
-                    shape=(count * indices_per_feature,),
+                    shape=(count * self.get_indices_per_feature(i),),
                 )
             ))
             values.append(to_pytorch(

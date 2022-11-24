@@ -168,6 +168,17 @@ fn dataloader_thread(
                         process::<PhasedStmBoard384, PieceCount>(batch, boards)
                     }
                 },
+                InputFeatureSetType::Ice4InputFeatures => match bucketing_scheme {
+                    BucketingSchemeType::NoBucketing => {
+                        process::<Ice4InputFeatures, NoBucketing>(batch, boards)
+                    }
+                    BucketingSchemeType::ModifiedMaterial => {
+                        process::<Ice4InputFeatures, ModifiedMaterial>(batch, boards)
+                    }
+                    BucketingSchemeType::PieceCount => {
+                        process::<Ice4InputFeatures, PieceCount>(batch, boards)
+                    }
+                },
             });
 
         if send.send(batches).is_err() {
@@ -203,7 +214,6 @@ fn batch_buffer(feature_format: InputFeatureSetType, batch_size: usize) -> Vec<B
             batch_size,
             feature_format.max_features(),
             feature_format.indices_per_feature(),
-            feature_format.tensors_per_board(),
         )
     });
     v

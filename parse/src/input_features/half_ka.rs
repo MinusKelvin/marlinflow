@@ -8,8 +8,7 @@ pub struct HalfKa;
 
 impl InputFeatureSet for HalfKa {
     const MAX_FEATURES: usize = 32;
-    const INDICES_PER_FEATURE: usize = 2;
-    const TENSORS_PER_BOARD: usize = 2;
+    const INDICES_PER_FEATURE: &'static [usize] = &[2, 2];
 
     fn add_features(board: Board, mut entry: EntryFeatureWriter) {
         let stm = board.side_to_move();
@@ -22,8 +21,8 @@ impl InputFeatureSet for HalfKa {
                 for square in board.pieces(piece) & board.colors(color) {
                     let stm_feature = feature(stm, stm_king, color, piece, square);
                     let nstm_feature = feature(!stm, nstm_king, color, piece, square);
-                    entry.add_feature(0, stm_feature as i64, 1.0);
-                    entry.add_feature(1, nstm_feature as i64, 1.0);
+                    entry.add_feature(0, &[stm_feature as i64], 1.0);
+                    entry.add_feature(1, &[nstm_feature as i64], 1.0);
                 }
             }
         }

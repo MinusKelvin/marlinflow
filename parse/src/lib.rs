@@ -24,7 +24,6 @@ export_batch_getters! {
     capacity as u32                 : batch_get_capacity -> u32,
     len as u32                      : batch_get_len -> u32,
     tensors_per_board as u32        : batch_get_tensors_per_board -> u32,
-    indices_per_feature as u32      : batch_get_indices_per_feature -> u32,
     cp_ptr                          : batch_get_cp_ptr -> *const f32,
     wdl_ptr                         : batch_get_wdl_ptr -> *const f32,
     bucket_ptr                      : batch_get_bucket_ptr -> *const i32,
@@ -43,6 +42,11 @@ pub unsafe extern "C" fn batch_get_feature_values_ptr(batch: *mut Batch, index: 
 #[no_mangle]
 pub unsafe extern "C" fn batch_get_feature_count(batch: *mut Batch, index: u32) -> u32 {
     batch.as_mut().unwrap().feature_count(index as usize) as u32
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn batch_get_indices_per_feature(batch: *mut Batch, index: u32) -> u32 {
+    batch.as_mut().unwrap().indices_per_feature(index as usize) as u32
 }
 
 #[no_mangle]
@@ -88,17 +92,10 @@ pub unsafe extern "C" fn input_feature_set_get_max_features(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn input_feature_set_get_indices_per_feature(
-    feature_set: InputFeatureSetType,
-) -> u32 {
-    feature_set.indices_per_feature() as u32
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn input_feature_set_get_tensors_per_board(
     feature_set: InputFeatureSetType,
 ) -> u32 {
-    feature_set.tensors_per_board() as u32
+    feature_set.indices_per_feature().len() as u32
 }
 
 #[no_mangle]

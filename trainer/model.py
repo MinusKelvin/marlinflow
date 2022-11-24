@@ -3,12 +3,12 @@ import torch
 from dataloader import Batch, InputFeatureSet, BucketingScheme
 
 
-def get_tensors(batch: Batch, feature_count: int) -> list[torch.Tensor]:
+def get_tensors(batch: Batch, feature_count: list[list[int]]) -> list[torch.Tensor]:
     tensors = []
-    for indices, values in zip(batch.indices, batch.values):
-        t = indices.reshape(-1, 2).T
+    for indices, values, fc in zip(batch.indices, batch.values, feature_count):
+        t = indices.reshape(-1, len(fc)+1).T
         tensors.append(torch.sparse_coo_tensor(
-            t, values, (batch.size, feature_count)
+            t, values, (batch.size, *fc)
         ).to_dense())
     return tensors
 
@@ -16,18 +16,24 @@ def get_tensors(batch: Batch, feature_count: int) -> list[torch.Tensor]:
 class Ice4Model(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.pst = torch.nn.Linear(768, 1)
+        self.pst = torch.nn.Linear(384, 1)
+        self.ft = torch.nn.Linear(96, 4)
+        self.out = torch.nn.Linear(4*8, 1)
         self.bucketing_scheme = BucketingScheme.NO_BUCKETING
 
     def forward(self, batch: Batch):
-        stm, nstm = get_tensors(batch, 768)
+        stml, stmr, nstml, nstmr, board = get_tensors(batch, [[384]]*4 + [[8, 96]])
 
-        result = self.pst(stm) - self.pst(nstm)
+        pst = self.pst(stml) + self.pst(stmr) - self.pst(nstml) - self.pst(nstmr)
 
-        return torch.sigmoid(result)
+        l1 = self.ft(board).reshape((-1, 4*8))
+        l1 = torch.clamp(l1, 0.0, 1.0)
+        out = self.out(l1)
+
+        return torch.sigmoid(out + pst)
 
     def input_feature_set(self) -> InputFeatureSet:
-        return InputFeatureSet.PHASED_STM_BOARD_384
+        return InputFeatureSet.ICE4_INPUT_FEATURES
 
 
 class NnBoard768(torch.nn.Module):

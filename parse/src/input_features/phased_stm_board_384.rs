@@ -1,4 +1,4 @@
-use cozy_chess::{Board, Color, File, Piece, Square};
+use cozy_chess::{Board, Color, Piece, Square};
 
 use crate::batch::EntryFeatureWriter;
 
@@ -8,8 +8,7 @@ pub struct PhasedStmBoard384;
 
 impl InputFeatureSet for PhasedStmBoard384 {
     const MAX_FEATURES: usize = 32;
-    const INDICES_PER_FEATURE: usize = 2;
-    const TENSORS_PER_BOARD: usize = 2;
+    const INDICES_PER_FEATURE: &'static [usize] = &[2,2];
 
     fn add_features(board: Board, mut entry: EntryFeatureWriter) {
         let stm = board.side_to_move();
@@ -28,8 +27,8 @@ impl InputFeatureSet for PhasedStmBoard384 {
                         true => 1,
                     };
                     let feature = feature(color, piece, square);
-                    entry.add_feature(tensor, feature as i64, phase);
-                    entry.add_feature(tensor, feature as i64 + 384, 1.0 - phase);
+                    entry.add_feature(tensor, &[feature as i64], phase);
+                    entry.add_feature(tensor, &[feature as i64 + 384], 1.0 - phase);
                 }
             }
         }

@@ -3,7 +3,6 @@ pub struct Batch {
     capacity: usize,
 
     features: Box<[SparseTensorList]>,
-    indices_per_feature: usize,
 
     cp: Box<[f32]>,
     wdl: Box<[f32]>,
@@ -18,6 +17,7 @@ struct SparseTensorList {
     feature_buffer: Box<[i64]>,
     values: Box<[f32]>,
     feature_count: usize,
+    indices_per_feature: usize,
 }
 
 impl SparseTensorList {
@@ -27,25 +27,20 @@ impl SparseTensorList {
                 .into_boxed_slice(),
             values: vec![0.0; capacity * max_features].into_boxed_slice(),
             feature_count: 0,
+            indices_per_feature,
         }
     }
 }
 
 impl Batch {
-    pub fn new(
-        capacity: usize,
-        max_features: usize,
-        indices_per_feature: usize,
-        tensors_per_board: usize,
-    ) -> Self {
+    pub fn new(capacity: usize, max_features: usize, indices_per_feature: &[usize]) -> Self {
         Self {
             capacity,
-            features: vec![
-                SparseTensorList::new(capacity, max_features, indices_per_feature);
-                tensors_per_board
-            ]
-            .into_boxed_slice(),
-            indices_per_feature,
+            features: indices_per_feature
+                .iter()
+                .map(|&i| SparseTensorList::new(capacity, max_features, i))
+                .collect::<Vec<_>>()
+                .into_boxed_slice(),
             cp: vec![0_f32; capacity].into_boxed_slice(),
             wdl: vec![0_f32; capacity].into_boxed_slice(),
             buckets: vec![0; capacity].into_boxed_slice(),
@@ -96,8 +91,8 @@ impl Batch {
         self.features.len()
     }
 
-    pub fn indices_per_feature(&self) -> usize {
-        self.indices_per_feature
+    pub fn indices_per_feature(&self, tensor: usize) -> usize {
+        self.features[tensor].indices_per_feature
     }
 
     pub fn cp_ptr(&self) -> *const f32 {
@@ -119,12 +114,14 @@ pub struct EntryFeatureWriter<'b> {
 }
 
 impl<'b> EntryFeatureWriter<'b> {
-    pub fn add_feature(&mut self, tensor: usize, feature: i64, value: f32) {
+    pub fn add_feature(&mut self, tensor: usize, feature: &[i64], value: f32) {
         let list = &mut self.batch.features[tensor];
-        let index = list.feature_count;
-        list.feature_buffer[index * 2] = self.index_in_batch as i64;
-        list.feature_buffer[index * 2 + 1] = feature;
-        list.values[index] = value;
+        let index = list.feature_count * list.indices_per_feature;
+        list.feature_buffer[index] = self.index_in_batch as i64;
+        for (i, &f) in feature.iter().enumerate() {
+            list.feature_buffer[index + i + 1] = f;
+        }
+        list.values[list.feature_count] = value;
         list.feature_count += 1;
     }
 }
