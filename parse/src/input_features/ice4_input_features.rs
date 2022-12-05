@@ -8,7 +8,7 @@ pub struct Ice4InputFeatures;
 
 impl InputFeatureSet for Ice4InputFeatures {
     const MAX_FEATURES: usize = 32;
-    const INDICES_PER_FEATURE: &'static [usize] = &[2, 2, 2, 2, 3];
+    const INDICES_PER_FEATURE: &'static [usize] = &[2, 2, 2, 2, 3, 3];
 
     fn add_features(board: Board, mut entry: EntryFeatureWriter) {
         let stm = board.side_to_move();
@@ -33,7 +33,9 @@ impl InputFeatureSet for Ice4InputFeatures {
                     entry.add_feature(tensor, &[feature as i64 + 192], 1.0 - phase);
 
                     let feature = file_feature(stm, color, piece, square.rank());
-                    entry.add_feature(4, &[square.file() as i64, feature as i64], 1.0);
+                    let nstm_feature = file_feature(!stm, color, piece, square.rank());
+                    entry.add_feature(0, &[square.file() as i64, feature as i64], 1.0);
+                    entry.add_feature(1, &[square.file() as i64, nstm_feature as i64], 1.0);
                 }
             }
         }

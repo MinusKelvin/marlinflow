@@ -18,16 +18,17 @@ class Ice4Model(torch.nn.Module):
         super().__init__()
         self.pst = torch.nn.Linear(384, 1)
         self.ft = torch.nn.Linear(96, 4)
-        self.out = torch.nn.Linear(4*8, 1)
+        self.out = torch.nn.Linear(4*8*2, 1)
         self.bucketing_scheme = BucketingScheme.NO_BUCKETING
 
     def forward(self, batch: Batch):
-        stml, stmr, nstml, nstmr, board = get_tensors(batch, [[384]]*4 + [[8, 96]])
+        stml, stmr, nstml, nstmr, board_stm, board_nstm = get_tensors(batch, [[384]]*4 + [[8, 96]]*2)
 
         pst = self.pst(stml) + self.pst(stmr) - self.pst(nstml) - self.pst(nstmr)
 
-        l1 = self.ft(board).reshape((-1, 4*8))
-        l1 = torch.clamp(l1, 0.0, 1.0)
+        l1_stm = self.ft(board_stm).reshape((-1, 4*8))
+        l1_nstm = self.ft(board_nstm).reshape((-1, 4*8))
+        l1 = torch.clamp(torch.concat([l1_stm, l1_nstm], dim=1), 0.0, 1.0)
         out = self.out(l1)
 
         return torch.sigmoid(out + pst)
