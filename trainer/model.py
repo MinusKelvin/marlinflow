@@ -16,13 +16,20 @@ def get_tensors(batch: Batch, feature_count: int) -> list[torch.Tensor]:
 class Ice4Model(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.pst = torch.nn.Linear(768, 1)
+        self.files = torch.nn.Parameter(torch.rand(4, 48))
+        self.ranks = torch.nn.Parameter(torch.rand(4, 16))
         self.bucketing_scheme = BucketingScheme.NO_BUCKETING
 
     def forward(self, batch: Batch):
         stm, nstm = get_tensors(batch, 768)
 
-        result = self.pst(stm) - self.pst(nstm)
+        psts = torch.bmm(
+            self.files.reshape((4, 48, 1)), self.ranks.reshape((4, 1, 16))
+        ).reshape((4, 1, 768))
+
+        result = torch.zeros((batch.size, 1), device=stm.device)
+        for pst in psts:
+            result += torch.nn.functional.linear(stm, pst) - torch.nn.functional.linear(nstm, pst)
 
         return torch.sigmoid(result)
 

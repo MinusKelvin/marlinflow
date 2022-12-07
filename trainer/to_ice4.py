@@ -19,6 +19,6 @@ def transpose(matrix):
 
 def to_ice4(params):
     return {
-        "pst.weight": transpose(params["pst.weight"]),
-        "pst.bias": params["pst.bias"],
+        "files": params["files"],
+        "ranks": params["ranks"],
     }

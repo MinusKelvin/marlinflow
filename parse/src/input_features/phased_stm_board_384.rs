@@ -1,4 +1,4 @@
-use cozy_chess::{Board, Color, File, Piece, Square};
+use cozy_chess::{Board, Color, File, Piece, Square, Rank};
 
 use crate::batch::EntryFeatureWriter;
 
@@ -27,22 +27,25 @@ impl InputFeatureSet for PhasedStmBoard384 {
                         false => 0,
                         true => 1,
                     };
-                    let feature = feature(color, piece, square);
-                    entry.add_feature(tensor, feature as i64, phase);
-                    entry.add_feature(tensor, feature as i64 + 384, 1.0 - phase);
+                    let mg_feature = feature(color, piece, square, 0);
+                    let eg_feature = feature(color, piece, square, 1);
+                    entry.add_feature(tensor, mg_feature as i64, phase);
+                    entry.add_feature(tensor, eg_feature as i64, 1.0 - phase);
                 }
             }
         }
     }
 }
 
-fn feature(color: Color, piece: Piece, square: Square) -> usize {
+fn feature(color: Color, piece: Piece, square: Square, phase: usize) -> usize {
     let square = match color {
         Color::White => square,
         Color::Black => square.flip_rank(),
     };
     let mut index = 0;
     index = index * Piece::NUM + piece as usize;
-    index = index * Square::NUM + square as usize;
+    index = index * Rank::NUM + square.rank() as usize;
+    index = index * 2 + phase;
+    index = index * File::NUM + square.file() as usize;
     index
 }
