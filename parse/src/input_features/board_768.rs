@@ -34,8 +34,8 @@ fn feature(perspective: Color, color: Color, piece: Piece, square: Square) -> us
     };
     let mut index = 0;
     index = index * Piece::NUM + piece as usize;
-    index = index * Rank::NUM + square.rank() as usize;
-    index = index * Color::NUM + color as usize;
     index = index * File::NUM + square.file() as usize;
+    index = index * Color::NUM + color as usize;
+    index = index * Rank::NUM + square.rank() as usize;
     index
 }
