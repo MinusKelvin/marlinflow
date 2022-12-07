@@ -21,4 +21,7 @@ def to_ice4(params):
     return {
         "files": params["files"],
         "ranks": params["ranks"],
+        "bias": params["bias"],
+        "out.weight": params["out.weight"],
+        "out.bias": params["out.bias"],
     }

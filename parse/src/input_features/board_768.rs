@@ -1,4 +1,4 @@
-use cozy_chess::{Board, Color, Piece, Square};
+use cozy_chess::{Board, Color, Piece, Square, Rank, File};
 
 use crate::batch::EntryFeatureWriter;
 
@@ -33,8 +33,9 @@ fn feature(perspective: Color, color: Color, piece: Piece, square: Square) -> us
         Color::Black => (square.flip_rank(), !color),
     };
     let mut index = 0;
-    index = index * Color::NUM + color as usize;
     index = index * Piece::NUM + piece as usize;
-    index = index * Square::NUM + square as usize;
+    index = index * Rank::NUM + square.rank() as usize;
+    index = index * Color::NUM + color as usize;
+    index = index * File::NUM + square.file() as usize;
     index
 }

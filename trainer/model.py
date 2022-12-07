@@ -16,25 +16,29 @@ def get_tensors(batch: Batch, feature_count: int) -> list[torch.Tensor]:
 class Ice4Model(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.files = torch.nn.Parameter(torch.rand(4, 48))
-        self.ranks = torch.nn.Parameter(torch.rand(4, 16))
+        self.files = torch.nn.Parameter(torch.rand(12, 48))
+        self.ranks = torch.nn.Parameter(torch.rand(12, 16))
+        self.bias = torch.nn.Parameter(torch.rand(12))
+        self.out = torch.nn.Linear(24, 1)
         self.bucketing_scheme = BucketingScheme.NO_BUCKETING
 
     def forward(self, batch: Batch):
         stm, nstm = get_tensors(batch, 768)
 
-        psts = torch.bmm(
-            self.files.reshape((4, 48, 1)), self.ranks.reshape((4, 1, 16))
-        ).reshape((4, 1, 768))
+        ft = torch.bmm(
+            self.files.reshape((12, 48, 1)), self.ranks.reshape((12, 1, 16))
+        ).reshape((12, 768))
 
-        result = torch.zeros((batch.size, 1), device=stm.device)
-        for pst in psts:
-            result += torch.nn.functional.linear(stm, pst) - torch.nn.functional.linear(nstm, pst)
+        stm_h = torch.nn.functional.linear(stm, ft, self.bias)
+        nstm_h = torch.nn.functional.linear(nstm, ft, self.bias)
+        hidden = torch.clamp(torch.cat((stm_h, nstm_h), dim=1), 0, 1)
 
-        return torch.sigmoid(result)
+        out = self.out(hidden)
+
+        return torch.sigmoid(out)
 
     def input_feature_set(self) -> InputFeatureSet:
-        return InputFeatureSet.PHASED_STM_BOARD_384
+        return InputFeatureSet.BOARD_768
 
 
 class NnBoard768(torch.nn.Module):
