@@ -22,6 +22,8 @@ def to_ice4(params):
         "files": params["files"],
         "ranks": params["ranks"],
         "bias": params["bias"],
+        "pst_files": params["pst_files"],
+        "pst_ranks": params["pst_ranks"],
         "out.weight": params["out.weight"],
         "out.bias": params["out.bias"],
     }
