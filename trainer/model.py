@@ -26,6 +26,7 @@ class NnBoard768(torch.nn.Module):
         nstm_ft = self.ft(board_nstm_sparse)
 
         hidden = torch.clamp(torch.cat((stm_ft, nstm_ft), dim=1), 0, 1)
+        hidden = hidden * hidden
 
         if self.idx_cache is None or self.idx_cache.shape[0] != hidden.shape[0]:
             self.idx_cache = torch.arange(
