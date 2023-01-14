@@ -155,7 +155,7 @@ class NnBoard768Cuda(torch.nn.Module):
         self.bucket_count = bucketing_scheme.bucket_count()
         self.max_features = InputFeatureSet.BOARD_768_CUDA.max_features()
         self.ft = DoubleFeatureTransformerSlice(768, ft_out)
-        self.out = torch.nn.Linear(ft_out * 2, 1)
+        self.out = torch.nn.Linear(ft_out * 2, 1 * self.bucket_count)
         self.idx_cache = None
 
     def forward(self, batch: Batch):
@@ -174,6 +174,7 @@ class NnBoard768Cuda(torch.nn.Module):
         )
 
         hidden = torch.clamp(torch.cat((stm_ft, nstm_ft), dim=1), 0, 1)
+        hidden = hidden * hidden
 
         if self.idx_cache is None or self.idx_cache.shape[0] != hidden.shape[0]:
             self.idx_cache = torch.arange(

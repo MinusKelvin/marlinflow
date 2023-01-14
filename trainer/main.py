@@ -142,7 +142,7 @@ def main():
 
     models = []
     for i in range(args.models):
-        models.append(NnBoard768(384, BucketingScheme.MODIFIED_MATERIAL).to(DEVICE))
+        models.append(NnBoard768Cuda(384, BucketingScheme.MODIFIED_MATERIAL).to(DEVICE))
 
     dataloader = BatchLoader(
         lambda: [

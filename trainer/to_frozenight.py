@@ -19,7 +19,7 @@ def transpose(matrix):
 
 def to_frozenight(params):
     return {
-        "ft.weight": transpose(quantize(params["ft.weight"], ACTIVATION_RANGE)),
+        "ft.weight": quantize(params["ft.weight"], ACTIVATION_RANGE),
         "ft.bias": quantize(params["ft.bias"], ACTIVATION_RANGE),
         "out.weight": quantize(params["out.weight"], WEIGHT_SCALE),
         "out.bias": quantize(params["out.bias"], ACTIVATION_RANGE * WEIGHT_SCALE),
