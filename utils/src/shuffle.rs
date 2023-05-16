@@ -22,6 +22,10 @@ pub struct Options {
     #[structopt(long, short, required_unless("in-place"))]
     output: Option<PathBuf>,
 
+    /// Temporary file directory (default: output dir)
+    #[structopt(long)]
+    tmp_dir: Option<PathBuf>,
+
     #[structopt(long, default_value = "134217728")]
     block_size: u64,
     #[structopt(long, default_value = "256")]
@@ -33,6 +37,10 @@ pub fn run(options: Options) -> Result<()> {
     let output_dir = output
         .parent()
         .expect("Could not get nominal parent directory of the oiutput file");
+
+    let tmp_dir = options
+        .tmp_dir
+        .unwrap_or_else(|| output.parent().unwrap().to_path_buf());
 
     let mut dataset = File::open(options.dataset)?;
     let positions = dataset.seek(SeekFrom::End(0))? / std::mem::size_of::<PackedBoard>() as u64;
@@ -55,6 +63,7 @@ pub fn run(options: Options) -> Result<()> {
 
     let mut remaining = positions;
     let mut blocks_shuffled = 0;
+    let temp_dir = tmp_dir.clone();
     std::thread::spawn(move || loop {
         if remaining == 0 {
             break;
@@ -63,7 +72,7 @@ pub fn run(options: Options) -> Result<()> {
         remaining -= count;
         let mut data = read(&mut dataset, count).unwrap();
         data.shuffle(&mut thread_rng());
-        let mut f = tempfile::tempfile().unwrap();
+        let mut f = tempfile::tempfile_in(&temp_dir).unwrap();
         f.write_all(bytemuck::cast_slice(&data)).unwrap();
         send.send(f).unwrap();
         blocks_shuffled += 1;
@@ -82,12 +91,13 @@ pub fn run(options: Options) -> Result<()> {
         let (nsend, nrecv) = std::sync::mpsc::sync_channel(options.group_size as usize);
         let mut iter = recv.into_iter();
         let mut progress = 0;
+        let tmp_dir = tmp_dir.clone();
         std::thread::spawn(move || loop {
             let mut files: Vec<_> = (&mut iter).take(options.group_size as usize).collect();
             if files.is_empty() {
                 break;
             }
-            let mut to = tempfile::tempfile().unwrap();
+            let mut to = tempfile::tempfile_in(&tmp_dir).unwrap();
             interleave(&mut to, &mut files, |_, _| {}).unwrap();
             nsend.send(to).unwrap();
             progress += 1;
