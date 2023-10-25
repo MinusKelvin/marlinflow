@@ -34,7 +34,7 @@ def train(
     scale: float,
     epochs: int,
     save_epochs: int,
-    lr_drop: int | None = None,
+    lr_drop: list = [],
     lr_decay: float = 1.0,
     nndir: str = "nn"
 ) -> None:
@@ -51,7 +51,7 @@ def train(
         if new_epoch:
             epoch += 1
             optimizer.param_groups[0]["lr"] *= lr_decay
-            if epoch == lr_drop:
+            if epoch in lr_drop:
                 optimizer.param_groups[0]["lr"] *= 0.1
             print(f"epoch: {epoch}", end="\t")
             print(f"losses:", end="\t")
@@ -113,7 +113,7 @@ def main():
     parser.add_argument(
         "--lr-drop",
         type=int,
-        default=None,
+        action="append",
         help="The epoch learning rate will be dropped",
     )
     parser.add_argument(

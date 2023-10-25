@@ -1,4 +1,4 @@
-use cozy_chess::{Board, Color, File, Piece, Square};
+use cozy_chess::{Board, Color, Piece, Square};
 
 use crate::batch::EntryFeatureWriter;
 

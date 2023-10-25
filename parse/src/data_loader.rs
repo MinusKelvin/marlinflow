@@ -3,7 +3,6 @@ use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::{fs::File, io::Read, path::Path};
 
 use bytemuck::Zeroable;
-use cozy_chess::Color;
 use marlinformat::PackedBoard;
 use rayon::prelude::*;
 

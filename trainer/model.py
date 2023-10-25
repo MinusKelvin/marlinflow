@@ -17,6 +17,7 @@ class Ice4Model(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.params = torch.nn.Linear(ICE4_FEATURE_COUNT, 1, bias=False)
+        torch.nn.init.zeros_(self.params.weight.data)
         self.bucketing_scheme = BucketingScheme.NO_BUCKETING
 
     def forward(self, batch: Batch):
