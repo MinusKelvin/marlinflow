@@ -18,6 +18,7 @@ class Ice4Model(torch.nn.Module):
         super().__init__()
         self.params = torch.nn.Linear(ICE4_FEATURE_COUNT, 1, bias=False)
         self.bucketing_scheme = BucketingScheme.NO_BUCKETING
+        torch.nn.init.constant_(self.params.weight, 0)
 
     def forward(self, batch: Batch):
         features, = get_tensors(batch, ICE4_FEATURE_COUNT)
