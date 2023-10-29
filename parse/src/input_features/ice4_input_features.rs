@@ -1,4 +1,7 @@
-use cozy_chess::{BitBoard, Board, Color, File, Piece, Rank, Square};
+use cozy_chess::{
+    get_bishop_moves, get_king_moves, get_knight_moves, get_pawn_attacks, get_pawn_quiets,
+    get_rook_moves, BitBoard, Board, Color, File, Piece, Rank, Square,
+};
 
 use crate::batch::EntryFeatureWriter;
 
@@ -45,6 +48,7 @@ offsets! {
     SHIELD_PAWNS: 4;
     KING_ON_OPEN_FILE: 1;
     KING_ON_SEMIOPEN_FILE: 1;
+    MOBILITY: 6;
 }
 
 const PIECE_PST_OFFSETS: [usize; 6] = [
@@ -60,7 +64,7 @@ const PIECE_QUAD_OFFSETS: [usize; 6] = [
 ];
 
 impl InputFeatureSet for Ice4InputFeatures {
-    const MAX_FEATURES: usize = 48;
+    const MAX_FEATURES: usize = 64;
     const INDICES_PER_FEATURE: usize = 2;
     const TENSORS_PER_BOARD: usize = 1;
 
@@ -74,11 +78,11 @@ impl InputFeatureSet for Ice4InputFeatures {
         let mut features = [0i8; TOTAL_FEATURES];
 
         for &piece in &Piece::ALL {
-            for square in board.pieces(piece) {
-                let color = board.color_on(square).unwrap();
+            for unflipped_square in board.pieces(piece) {
+                let color = board.color_on(unflipped_square).unwrap();
                 let (square, inc) = match color {
-                    Color::White => (square, 1),
-                    Color::Black => (square.flip_rank(), -1),
+                    Color::White => (unflipped_square, 1),
+                    Color::Black => (unflipped_square.flip_rank(), -1),
                 };
 
                 if piece == Piece::Rook {
@@ -115,6 +119,23 @@ impl InputFeatureSet for Ice4InputFeatures {
                     },
                 };
                 features[PIECE_PST_OFFSETS[piece as usize] + square] += inc;
+
+                let mob = match piece {
+                    Piece::Pawn => {
+                        get_pawn_quiets(unflipped_square, color, board.occupied())
+                            | get_pawn_attacks(unflipped_square, color)
+                    }
+                    Piece::Knight => get_knight_moves(unflipped_square),
+                    Piece::Bishop => get_bishop_moves(unflipped_square, board.occupied()),
+                    Piece::Rook => get_rook_moves(unflipped_square, board.occupied()),
+                    Piece::Queen => {
+                        get_bishop_moves(unflipped_square, board.occupied())
+                            | get_rook_moves(unflipped_square, board.occupied())
+                    }
+                    Piece::King => get_king_moves(unflipped_square),
+                };
+                features[MOBILITY + piece as usize] +=
+                    inc * (mob & !board.colors(color)).len() as i8;
             }
         }
 
