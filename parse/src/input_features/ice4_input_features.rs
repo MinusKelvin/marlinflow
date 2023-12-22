@@ -123,7 +123,7 @@ impl InputFeatureSet for Ice4InputFeatures {
                 let mob = match piece {
                     Piece::Pawn => {
                         get_pawn_quiets(unflipped_square, color, board.occupied())
-                            | get_pawn_attacks(unflipped_square, color)
+                            | (get_pawn_attacks(unflipped_square, color) & board.colors(!color))
                     }
                     Piece::Knight => get_knight_moves(unflipped_square),
                     Piece::Bishop => get_bishop_moves(unflipped_square, board.occupied()),
