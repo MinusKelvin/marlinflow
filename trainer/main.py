@@ -27,7 +27,7 @@ class WeightClipper:
 
 
 def train(
-    models: list[torch.nn.Module],
+    model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
     dataloader: BatchLoader,
     wdl: float,
@@ -39,7 +39,7 @@ def train(
     nndir: str = "nn"
 ) -> None:
     clipper = WeightClipper()
-    running_loss = [torch.zeros((1,), device=DEVICE) for _ in models]
+    running_loss = torch.zeros((1,), device=DEVICE)
     start_time = time()
     iterations = 0
 
@@ -54,38 +54,33 @@ def train(
             if epoch in lr_drop:
                 optimizer.param_groups[0]["lr"] *= 0.1
             print(f"epoch: {epoch}", end="\t")
-            print(f"losses:", end="\t")
-            for loss in running_loss:
-                print(f"{loss.item() / iterations:.4g}", end="\t")
+            print(f"loss: ", end="")
+            print(f"{running_loss.item() / iterations:.4g}", end="\t")
             print(f"pos/s: {fens / (time() - start_time):.0f}", flush=True)
 
-            running_loss = [torch.zeros((1,), device=DEVICE) for _ in models]
+            running_loss = torch.zeros((1,), device=DEVICE)
             start_time = time()
             iterations = 0
             fens = 0
 
             if epoch % save_epochs == 0:
-                for i, model in enumerate(models):
-                    param_map = {
-                        name: param.detach().cpu().numpy().tolist()
-                        for name, param in model.named_parameters()
-                    }
-                    with open(f"{nndir}/{i}-{epoch}.json", "w") as json_file:
-                        json.dump(param_map, json_file)
+                param_map = {
+                    name: param.detach().cpu().numpy().tolist()
+                    for name, param in model.named_parameters()
+                }
+                with open(f"{nndir}/{epoch}.json", "w") as json_file:
+                    json.dump(param_map, json_file)
 
         expected = torch.sigmoid(batch.cp / scale) * (1 - wdl) + batch.wdl * wdl
         optimizer.zero_grad()
-        for model, run_loss in zip(models, running_loss):
-            prediction = model(batch)
+        prediction = model(batch)
+        loss = torch.mean(torch.abs(prediction - expected) ** 2.6)
+        loss.backward()
 
-            loss = torch.mean(torch.abs(prediction - expected) ** 2.6)
-            loss.backward()
-
-            with torch.no_grad():
-                run_loss += loss
+        with torch.no_grad():
+            running_loss += loss
         optimizer.step()
-        # for model in models:
-        #     model.apply(clipper)
+        # model.apply(clipper)
 
         iterations += 1
         fens += batch.size
@@ -117,12 +112,6 @@ def main():
         help="The epoch learning rate will be dropped",
     )
     parser.add_argument(
-        "--models",
-        type=int,
-        default=1,
-        help="The number of models to train in parallel"
-    )
-    parser.add_argument(
         "--lr-decay",
         type=float,
         default=1,
@@ -132,9 +121,7 @@ def main():
 
     assert args.scale is not None
 
-    models = []
-    for i in range(args.models):
-        models.append(Ice4Model().to(DEVICE))
+    model = Ice4Model().to(DEVICE)
 
     dataloader = BatchLoader(
         lambda: [
@@ -144,17 +131,17 @@ def main():
 #            ),
             args.data
         ][-1],
-        models[0].input_feature_set(),
-        models[0].bucketing_scheme,
+        model.input_feature_set(),
+        model.bucketing_scheme,
         args.batch_size
     )
 
     optimizer = torch.optim.Adam([
-        param for model in models for param in model.parameters()
+        param for param in model.parameters()
     ], lr=args.lr)
 
     train(
-        models,
+        model,
         optimizer,
         dataloader,
         args.wdl,
