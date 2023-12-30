@@ -160,6 +160,8 @@ def main():
         param for param in model.parameters()
     ], lr=args.lr)
 
+    print(f"train id: {train_id}")
+
     train(
         model,
         optimizer,

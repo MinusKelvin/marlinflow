@@ -9,7 +9,7 @@ use super::InputFeatureSet;
 
 pub struct Ice4InputFeatures;
 
-pub const ICE4_FEATURE_COUNT: usize = TOTAL_FEATURES * 2;
+pub const ICE4_FEATURE_COUNT: usize = TOTAL_FEATURES;
 
 macro_rules! offsets {
     ($name:ident: $($rest:tt)*) => {
@@ -66,7 +66,7 @@ const PIECE_QUAD_OFFSETS: [usize; 6] = [
 impl InputFeatureSet for Ice4InputFeatures {
     const MAX_FEATURES: usize = 64;
     const INDICES_PER_FEATURE: usize = 2;
-    const TENSORS_PER_BOARD: usize = 1;
+    const TENSORS_PER_BOARD: usize = 2;
 
     fn add_features(board: Board, mut entry: EntryFeatureWriter) {
         let phase = (board.pieces(Piece::Knight).len()
@@ -242,9 +242,10 @@ impl InputFeatureSet for Ice4InputFeatures {
         }
 
         for (i, &v) in features.iter().enumerate().filter(|&(_, &v)| v != 0) {
-            entry.add_feature(0, i as i64, v as f32 * phase);
-            entry.add_feature(0, (i + TOTAL_FEATURES) as i64, v as f32 * (1.0 - phase));
+            entry.add_feature(0, i as i64, v as f32);
         }
+
+        entry.add_feature(1, 0, phase);
     }
 }
 

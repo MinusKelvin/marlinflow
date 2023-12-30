@@ -30,16 +30,17 @@ def to_evalcpp(last_loss, train_id, param_map):
     print("#define S(a, b) (a + (b * 0x10000))")
     print()
 
-    scaled = [v * 160 for v in param_map["params.weight"][0]]
+    mg_scaled = [v * 160 for v in param_map["mg.weight"][0]]
+    eg_scaled = [v * 160 for v in param_map["eg.weight"][0]]
 
-    sections = []
-    sizes = [48, 16, 3, 16, 3, 16, 3, 16, 3, 16, 48, 1, 8, 1, 1, 2, 1, 1, 4, 1, 1, 6] * 2
+    mg = []
+    eg = []
+    sizes = [48, 16, 3, 16, 3, 16, 3, 16, 3, 16, 48, 1, 8, 1, 1, 2, 1, 1, 4, 1, 1, 6]
     acc = 0
     for s in sizes:
-        sections.append(scaled[acc:acc+s])
+        mg.append(mg_scaled[acc:acc+s])
+        eg.append(eg_scaled[acc:acc+s])
         acc += s
-
-    eg = len(sections)//2
 
     data_string = ""
 
@@ -51,8 +52,8 @@ def to_evalcpp(last_loss, train_id, param_map):
     def define_param(name, idx, *, sign=1):
         defines.append((
             name,
-            round(sections[idx][0]) * sign,
-            round(sections[idx+eg][0]) * sign
+            round(mg[idx][0]) * sign,
+            round(eg[idx][0]) * sign
         ))
 
     def array_param(name, idx, *, leading_zero=False, sign=1):
@@ -61,25 +62,25 @@ def to_evalcpp(last_loss, train_id, param_map):
             print("0, ", end="")
         print(", ".join(
             f"S({sign * round(v1)}, {sign * round(v2)})"
-            for v1, v2 in zip(sections[idx], sections[idx+eg])
+            for v1, v2 in zip(mg[idx], eg[idx])
         ), end="")
         print("};")
 
-    mg_off = round(mg_stringer.add(sections[0]))
-    eg_off = round(eg_stringer.add(sections[0+eg]))
+    mg_off = round(mg_stringer.add(mg[0]))
+    eg_off = round(eg_stringer.add(eg[0]))
     defines.append(("PAWN_OFFSET", mg_off, eg_off))
-    mg_off = round(mg_stringer.add(sections[10]))
-    eg_off = round(eg_stringer.add(sections[10+eg]))
+    mg_off = round(mg_stringer.add(mg[10]))
+    eg_off = round(eg_stringer.add(eg[10]))
     defines.append(("PASSED_PAWN_OFFSET", mg_off, eg_off))
 
-    mg_stringer.add(sections[9])
-    eg_stringer.add(sections[9+eg])
+    mg_stringer.add(mg[9])
+    eg_stringer.add(eg[9])
 
     print("int QUADRANTS[] = {", end="")
     for i in range(1, 9, 2):
-        mg_off = mg_stringer.add(sections[i])
-        eg_off = eg_stringer.add(sections[i+eg])
-        for j, (mg_q, eg_q) in enumerate(zip([0] + sections[i+1], [0] + sections[i+1+eg])):
+        mg_off = mg_stringer.add(mg[i])
+        eg_off = eg_stringer.add(eg[i])
+        for j, (mg_q, eg_q) in enumerate(zip([0] + mg[i+1], [0] + eg[i+1])):
             if j % 4 == 0: print("\n   ", end="")
             print(f" S({round(mg_off + mg_q)}, {round(eg_off + eg_q)})", end=",")
     print("\n};")

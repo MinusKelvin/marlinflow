@@ -3,9 +3,9 @@ import torch
 from dataloader import Batch, InputFeatureSet, BucketingScheme, ICE4_FEATURE_COUNT
 
 
-def get_tensors(batch: Batch, feature_count: int) -> list[torch.Tensor]:
+def get_tensors(batch: Batch, feature_counts: list) -> list[torch.Tensor]:
     tensors = []
-    for indices, values in zip(batch.indices, batch.values):
+    for indices, values, feature_count in zip(batch.indices, batch.values, feature_counts):
         t = indices.reshape(-1, 2).T
         tensors.append(torch.sparse_coo_tensor(
             t, values, (batch.size, feature_count)
@@ -16,14 +16,19 @@ def get_tensors(batch: Batch, feature_count: int) -> list[torch.Tensor]:
 class Ice4Model(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.params = torch.nn.Linear(ICE4_FEATURE_COUNT, 1, bias=False)
-        torch.nn.init.zeros_(self.params.weight.data)
+        self.mg = torch.nn.Linear(ICE4_FEATURE_COUNT, 1, bias=False)
+        torch.nn.init.zeros_(self.mg.weight.data)
+        self.eg = torch.nn.Linear(ICE4_FEATURE_COUNT, 1, bias=False)
+        torch.nn.init.zeros_(self.eg.weight.data)
         self.bucketing_scheme = BucketingScheme.NO_BUCKETING
 
     def forward(self, batch: Batch):
-        features, = get_tensors(batch, ICE4_FEATURE_COUNT)
+        features, phase = get_tensors(batch, [ICE4_FEATURE_COUNT, 1])
 
-        result = self.params(features)
+        mg = self.mg(features)
+        eg = self.eg(features)
+
+        result = torch.lerp(eg, mg, phase)
 
         return torch.sigmoid(result)
 
