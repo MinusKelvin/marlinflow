@@ -8,7 +8,8 @@ import subprocess
 
 from dataloader import BatchLoader, BucketingScheme
 from model import Ice4Model
-from time import time
+from time import time, strftime
+from to_evalcpp import dump_result
 
 import torch
 
@@ -33,10 +34,9 @@ def train(
     wdl: float,
     scale: float,
     epochs: int,
-    save_epochs: int,
+    training_id: str,
     lr_drop: list = [],
     lr_decay: float = 1.0,
-    nndir: str = "nn"
 ) -> None:
     clipper = WeightClipper()
     running_loss = torch.zeros((1,), device=DEVICE)
@@ -45,31 +45,25 @@ def train(
 
     fens = 0
     epoch = 0
+    last_loss = 0
 
     while epoch < epochs:
         new_epoch, batch = dataloader.read_batch(DEVICE)
         if new_epoch:
             epoch += 1
+            last_loss = running_loss.item() / iterations
             optimizer.param_groups[0]["lr"] *= lr_decay
             if epoch in lr_drop:
                 optimizer.param_groups[0]["lr"] *= 0.1
             print(f"epoch: {epoch}", end="\t")
             print(f"loss: ", end="")
-            print(f"{running_loss.item() / iterations:.4g}", end="\t")
+            print(f"{last_loss:.4g}", end="\t")
             print(f"pos/s: {fens / (time() - start_time):.0f}", flush=True)
 
             running_loss = torch.zeros((1,), device=DEVICE)
             start_time = time()
             iterations = 0
             fens = 0
-
-            if epoch % save_epochs == 0:
-                param_map = {
-                    name: param.detach().cpu().numpy().tolist()
-                    for name, param in model.named_parameters()
-                }
-                with open(f"{nndir}/{epoch}.json", "w") as json_file:
-                    json.dump(param_map, json_file)
 
         expected = torch.sigmoid(batch.cp / scale) * (1 - wdl) + batch.wdl * wdl
         optimizer.zero_grad()
@@ -85,6 +79,20 @@ def train(
         iterations += 1
         fens += batch.size
 
+    train_result = {
+        "loss": last_loss,
+        "train_id": training_id,
+        "params": {
+            name: param.detach().cpu().numpy().tolist()
+            for name, param in model.named_parameters()
+        }
+    }
+
+    with open(f"{training_id}.json", "w") as f:
+        json.dump(train_result, f)
+
+    dump_result(train_result)
+
 
 def main():
 
@@ -93,18 +101,11 @@ def main():
     parser.add_argument(
         "--data", type=str, help="The data file"
     )
-    parser.add_argument("--nndir", type=str, default="nn", help="")
     parser.add_argument("--lr", type=float, help="Initial learning rate")
     parser.add_argument("--epochs", type=int, help="Epochs to train for")
     parser.add_argument("--batch-size", type=int, default=16384, help="Batch size")
     parser.add_argument("--wdl", type=float, default=0.0, help="WDL weight to be used")
     parser.add_argument("--scale", type=float, help="WDL weight to be used")
-    parser.add_argument(
-        "--save-epochs",
-        type=int,
-        default=100,
-        help="How often the program will save the network",
-    )
     parser.add_argument(
         "--lr-drop",
         type=int,
@@ -117,9 +118,28 @@ def main():
         default=1,
         help="Factor to multiply LR by every epoch"
     )
+    parser.add_argument(
+        "--convert",
+        type=str,
+        help="param map to convert"
+    )
+    parser.add_argument(
+        "--train-id",
+        type=str,
+        help="training id"
+    )
     args = parser.parse_args()
 
+    if args.convert is not None:
+        with open(args.convert) as f:
+            result = json.load(f)
+        dump_result(result)
+        return
+
     assert args.scale is not None
+
+    train_id = args.train_id or \
+        strftime("%Y-%m-%d-%H-%M-%S-") + os.path.splitext(os.path.basename(args.data))[0]
 
     model = Ice4Model().to(DEVICE)
 
@@ -147,10 +167,9 @@ def main():
         args.wdl,
         args.scale,
         args.epochs,
-        args.save_epochs,
+        train_id,
         lr_drop=args.lr_drop,
         lr_decay=args.lr_decay,
-        nndir=args.nndir,
     )
 
 
