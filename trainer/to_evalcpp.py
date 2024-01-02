@@ -5,23 +5,19 @@ from contextlib import redirect_stdout
 
 class DataStringer:
     def __init__(self):
-        self.little = ""
-        self.big = ""
+        self.data = ""
 
     def add(self, data):
         smallest = min(data)
         for v in data:
             v = round(v - smallest)
-            low = v % 95
-            high = v // 95
-            lc = chr(low + 32)
-            hc = chr(high + 32)
-            if lc == "\\" or lc == "\"":
-                self.little += "\\"
-            if hc == "\\" or hc == "\"":
-                self.big += "\\"
-            self.little += lc
-            self.big += hc
+            c = chr(v + 32)
+            if v + 32 == 0x7F:
+                self.data += "\\177"
+            elif c == "\\" or c == "\"":
+                self.data += "\\" + c
+            else:
+                self.data += c
         return smallest
 
 def to_evalcpp(last_loss, train_id, param_map):
@@ -100,8 +96,7 @@ def to_evalcpp(last_loss, train_id, param_map):
 
     print()
 
-    print(f"#define DATA_LOW \"{mg_stringer.little + eg_stringer.little}\"")
-    print(f"#define DATA_HIGH \"{mg_stringer.big + eg_stringer.big}\"")
+    print(f"#define DATA_STRING L\"{mg_stringer.data + eg_stringer.data}\"")
 
     print()
     for name, mg, eg in defines:
