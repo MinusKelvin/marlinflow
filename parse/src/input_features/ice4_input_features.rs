@@ -49,6 +49,7 @@ offsets! {
     KING_ON_OPEN_FILE: 1;
     KING_ON_SEMIOPEN_FILE: 1;
     MOBILITY: 6;
+    KING_RING_ATTACKS: 1;
 }
 
 const PIECE_PST_OFFSETS: [usize; 6] = [
@@ -134,6 +135,8 @@ impl InputFeatureSet for Ice4InputFeatures {
                     }
                     Piece::King => get_king_moves(unflipped_square),
                 };
+                features[KING_RING_ATTACKS] +=
+                    inc * (get_king_moves(board.king(!color)) & mob).len() as i8;
                 features[MOBILITY + piece as usize] +=
                     inc * (mob & !board.colors(color)).len() as i8;
             }

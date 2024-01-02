@@ -35,7 +35,7 @@ def to_evalcpp(last_loss, train_id, param_map):
 
     mg = []
     eg = []
-    sizes = [48, 16, 3, 16, 3, 16, 3, 16, 3, 16, 48, 1, 8, 1, 1, 2, 1, 1, 4, 1, 1, 6]
+    sizes = [48, 16, 3, 16, 3, 16, 3, 16, 3, 16, 48, 1, 8, 1, 1, 2, 1, 1, 4, 1, 1, 6, 1]
     acc = 0
     for s in sizes:
         mg.append(mg_scaled[acc:acc+s])
@@ -96,6 +96,7 @@ def to_evalcpp(last_loss, train_id, param_map):
     define_param("KING_OPEN", 19)
     define_param("KING_SEMIOPEN", 20)
     array_param("MOBILITY", 21, leading_zero=True)
+    define_param("KING_RING_ATTACKS", 22)
 
     print()
 
