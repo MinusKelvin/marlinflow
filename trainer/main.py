@@ -37,6 +37,7 @@ def train(
     training_id: str,
     lr_drop: list = [],
     lr_decay: float = 1.0,
+    nndir: str = "",
 ) -> None:
     clipper = WeightClipper()
     running_loss = torch.zeros((1,), device=DEVICE)
@@ -88,7 +89,7 @@ def train(
         }
     }
 
-    with open(f"{training_id}.json", "w") as f:
+    with open(f"{os.path.join(nndir, training_id)}.json", "w") as f:
         json.dump(train_result, f)
 
     dump_result(train_result)
@@ -106,6 +107,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=16384, help="Batch size")
     parser.add_argument("--wdl", type=float, default=0.0, help="WDL weight to be used")
     parser.add_argument("--scale", type=float, help="WDL weight to be used")
+    parser.add_argument("--nndir", type=str, default="", help="directory to store weights")
     parser.add_argument(
         "--lr-drop",
         type=int,
@@ -172,6 +174,7 @@ def main():
         train_id,
         lr_drop=args.lr_drop,
         lr_decay=args.lr_decay,
+        nndir=args.nndir
     )
 
 
