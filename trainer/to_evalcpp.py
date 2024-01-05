@@ -31,7 +31,7 @@ def to_evalcpp(last_loss, train_id, param_map):
 
     mg = []
     eg = []
-    sizes = [48, 16, 3, 16, 3, 16, 3, 16, 3, 16, 48, 1, 8, 1, 1, 2, 1, 1, 4, 1, 1, 6, 1]
+    sizes = [48, 16, 3, 16, 3, 16, 3, 16, 3, 16, 48, 1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 6, 1]
     acc = 0
     for s in sizes:
         mg.append(mg_scaled[acc:acc+s])
@@ -82,10 +82,10 @@ def to_evalcpp(last_loss, train_id, param_map):
     print("\n};")
 
     define_param("BISHOP_PAIR", 11)
-    array_param("DOUBLED_PAWN", 12, sign=-1)
+    define_param("DOUBLED_PAWN", 12, sign=-1)
     define_param("TEMPO", 13)
     define_param("ISOLATED_PAWN", 14, sign=-1)
-    array_param("PROTECTED_PAWN", 15, leading_zero=True)
+    define_param("PROTECTED_PAWN", 15)
     define_param("ROOK_OPEN", 16)
     define_param("ROOK_SEMIOPEN", 17)
     array_param("PAWN_SHIELD", 18)

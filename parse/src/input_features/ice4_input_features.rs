@@ -38,11 +38,10 @@ offsets! {
     KING_PST: 16;
     PASSED_PAWN_PST: 48;
     BISHOP_PAIR: 1;
-    DOUBLED_PAWN: 8;
+    DOUBLED_PAWN: 1;
     TEMPO: 1;
     ISOLATED_PAWN: 1;
-    SINGLE_PROTECTED_PAWN: 1;
-    DOUBLE_PROTECTED_PAWN: 1;
+    PROTECTED_PAWN: 1;
     ROOK_ON_OPEN_FILE: 1;
     ROOK_ON_SEMIOPEN_FILE: 1;
     SHIELD_PAWNS: 4;
@@ -181,28 +180,22 @@ impl InputFeatureSet for Ice4InputFeatures {
             white_doubled_mask |= white_doubled_mask >> 8;
             black_doubled_mask |= black_doubled_mask << 8;
         }
-        for sq in board.colored_pieces(Color::White, Piece::Pawn) & BitBoard(white_doubled_mask) {
-            features[DOUBLED_PAWN + sq.file() as usize] += 1;
-        }
-        for sq in board.colored_pieces(Color::Black, Piece::Pawn) & BitBoard(black_doubled_mask) {
-            features[DOUBLED_PAWN + sq.file() as usize] -= 1;
-        }
+        features[DOUBLED_PAWN] += (board.colored_pieces(Color::White, Piece::Pawn)
+            & BitBoard(white_doubled_mask))
+        .len() as i8;
+        features[DOUBLED_PAWN] -= (board.colored_pieces(Color::Black, Piece::Pawn)
+            & BitBoard(black_doubled_mask))
+        .len() as i8;
 
         let pawns = board.colored_pieces(Color::White, Piece::Pawn);
         let pawn_attacks_right = BitBoard((pawns & !File::A.bitboard()).0 << 7);
         let pawn_attacks_left = BitBoard((pawns & !File::H.bitboard()).0 << 9);
-        features[SINGLE_PROTECTED_PAWN] +=
-            ((pawn_attacks_left ^ pawn_attacks_right) & pawns).len() as i8;
-        features[DOUBLE_PROTECTED_PAWN] +=
-            ((pawn_attacks_left & pawn_attacks_right) & pawns).len() as i8;
+        features[PROTECTED_PAWN] += ((pawn_attacks_left | pawn_attacks_right) & pawns).len() as i8;
 
         let pawns = board.colored_pieces(Color::Black, Piece::Pawn);
         let pawn_attacks_right = BitBoard((pawns & !File::A.bitboard()).0 >> 9);
         let pawn_attacks_left = BitBoard((pawns & !File::H.bitboard()).0 >> 7);
-        features[SINGLE_PROTECTED_PAWN] -=
-            ((pawn_attacks_left ^ pawn_attacks_right) & pawns).len() as i8;
-        features[DOUBLE_PROTECTED_PAWN] -=
-            ((pawn_attacks_left & pawn_attacks_right) & pawns).len() as i8;
+        features[PROTECTED_PAWN] -= ((pawn_attacks_left | pawn_attacks_right) & pawns).len() as i8;
 
         for color in Color::ALL {
             let inc = match color {
